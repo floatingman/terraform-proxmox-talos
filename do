@@ -3,20 +3,20 @@ set -euo pipefail
 
 # see https://github.com/siderolabs/talos/releases
 # renovate: datasource=github-releases depName=siderolabs/talos
-talos_version="1.8.3"
+talos_version="1.9.1"
 
 # see https://github.com/siderolabs/extensions/pkgs/container/qemu-guest-agent
 # see https://github.com/siderolabs/extensions/tree/main/guest-agents/qemu-guest-agent
-talos_qemu_guest_agent_extension_tag="9.1.0@sha256:cd8154036a0711f6f0a2ec9d6ce8539219d0e46a78e0eca22598d4d884f3f52c"
+talos_qemu_guest_agent_extension_tag="9.2.0@sha256:0024c37db8ad20c8a9c5167a14ec82e272ebdaa07e868fe6325076bf7cb991e5"
 
 # see https://github.com/siderolabs/extensions/pkgs/container/drbd
 # see https://github.com/siderolabs/extensions/tree/main/storage/drbd
 # see https://github.com/LINBIT/drbd
-talos_drbd_extension_tag="9.2.11-v1.8.3@sha256:4fab47f31d7e7d1873cc17fc46225805a424234eac73e5ff61b22419b9a496fc"
+talos_drbd_extension_tag="9.2.12-v1.9.1@sha256:54968d9481ed6f7af353ea233d035898e4dfff378206d04948546c76452707c7"
 
 # see https://github.com/siderolabs/extensions/pkgs/container/spin
 # see https://github.com/siderolabs/extensions/tree/main/container-runtime/spin
-talos_spin_extension_tag="v0.15.1@sha256:642488eadb94d4ddb30f9e65d8ed6836a4c00d699889e060019492308735af9b"
+talos_spin_extension_tag="v0.17.0@sha256:90dc7ea8260caadbdf17513d87a6a834869ec4021bc9d190d4f5f21911ce8dd7"
 
 # see https://github.com/piraeusdatastore/piraeus-operator/releases
 # renovate: datasource=github-releases depName=piraeusdatastore/piraeus-operator
@@ -87,7 +87,7 @@ input:
 output:
   kind: image
   imageOptions:
-    diskSize: $((2*1024*1024*1024))
+    diskSize: $((2 * 1024 * 1024 * 1024))
     diskFormat: raw
   outFormat: raw
 EOF
@@ -97,7 +97,7 @@ EOF
     -v /dev:/dev \
     --privileged \
     "ghcr.io/siderolabs/imager:$talos_version_tag" \
-    - < "tmp/talos/talos-$talos_version.yml"
+    - <"tmp/talos/talos-$talos_version.yml"
   local img_path="tmp/talos/talos-$talos_version.qcow2"
   qemu-img convert -O qcow2 tmp/talos/nocloud-amd64.raw $img_path
   qemu-img info $img_path
@@ -217,7 +217,7 @@ EOF
   step 'piraeus create-device-pool'
   local workers="$(terraform output -raw workers)"
   local nodes=($(echo "$workers" | tr ',' ' '))
-  for ((n=0; n<${#nodes[@]}; ++n)); do
+  for ((n = 0; n < ${#nodes[@]}; ++n)); do
     local node="w$((n))"
     step "piraeus wait node $node"
     while ! kubectl linstor storage-pool list --node "$node" >/dev/null 2>&1; do sleep 3; done
@@ -250,15 +250,15 @@ function info {
   for n in "${nodes[@]}"; do
     # NB there can be multiple machineconfigs in a machine. we only want to see
     #    the ones with an id that looks like a version tag.
-    talosctl -n $n get machineconfigs -o json \
-      | jq -r 'select(.metadata.id | test("v\\d+")) | .spec' \
-      | yq -r '.machine.install.image' \
-      | sed -E "s,(.+),$n: \1,g"
+    talosctl -n $n get machineconfigs -o json |
+      jq -r 'select(.metadata.id | test("v\\d+")) | .spec' |
+      yq -r '.machine.install.image' |
+      sed -E "s,(.+),$n: \1,g"
   done
   step 'talos node os-release'
   for n in "${nodes[@]}"; do
-    talosctl -n $n read /etc/os-release \
-      | sed -E "s,(.+),$n: \1,g"
+    talosctl -n $n read /etc/os-release |
+      sed -E "s,(.+),$n: \1,g"
   done
   step 'kubernetes nodes'
   kubectl get nodes -o wide
@@ -266,9 +266,9 @@ function info {
 }
 
 function export-kubernetes-ingress-ca-crt {
-  kubectl get -n cert-manager secret/ingress-tls -o jsonpath='{.data.tls\.crt}' \
-    | base64 -d \
-    > kubernetes-ingress-ca-crt.pem
+  kubectl get -n cert-manager secret/ingress-tls -o jsonpath='{.data.tls\.crt}' |
+    base64 -d \
+      >kubernetes-ingress-ca-crt.pem
 }
 
 function destroy {
@@ -276,33 +276,33 @@ function destroy {
 }
 
 case $1 in
-  update-talos-extensions)
-    update-talos-extensions
-    ;;
-  init)
-    init
-    ;;
-  plan)
-    plan
-    ;;
-  apply)
-    apply
-    ;;
-  plan-apply)
-    plan
-    apply
-    ;;
-  health)
-    health
-    ;;
-  info)
-    info
-    ;;
-  destroy)
-    destroy
-    ;;
-  *)
-    echo $"Usage: $0 {init|plan|apply|plan-apply|health|info}"
-    exit 1
-    ;;
+update-talos-extensions)
+  update-talos-extensions
+  ;;
+init)
+  init
+  ;;
+plan)
+  plan
+  ;;
+apply)
+  apply
+  ;;
+plan-apply)
+  plan
+  apply
+  ;;
+health)
+  health
+  ;;
+info)
+  info
+  ;;
+destroy)
+  destroy
+  ;;
+*)
+  echo $"Usage: $0 {init|plan|apply|plan-apply|health|info}"
+  exit 1
+  ;;
 esac
